@@ -21,6 +21,8 @@ matplotlib.use("Agg")
 from pylab import *
 from numpy import NaN
 from io import BytesIO
+import time
+from urlparse import urlparse, parse_qs
 
 
 class MyHandler(BaseHTTPRequestHandler):
@@ -49,6 +51,11 @@ class MyHandler(BaseHTTPRequestHandler):
 
   def do_GET(self):
     """ Respond to HTTP GET requests"""
+    qs = {}
+    #path = self.path
+    if '?' in self.path:
+        self.path, tmp = self.path.split('?', 1)
+        qs = parse_qs(tmp)
 
     # When root is requested, calculate Mandelbrot on request
     if self.path == "/":
@@ -74,6 +81,20 @@ class MyHandler(BaseHTTPRequestHandler):
     # On health check send an empty response
     elif self.path == "/health-check":
       self.send_response(200)
+    elif self.path == "/health-check-slow":
+      # query_components = { "imsi" : ["Hello"] } 
+      if "sleep" in qs:
+        time.sleep(int(qs["sleep"][0]))
+      else:
+        time.sleep(1)
+      self.send_response(200)
+      self.send_header("Content-Type", "text/html;charset=utf-8")
+      self.end_headers()
+      self.wfile.write(bytes("<html><head><title>simple test page</title></head>"))
+      self.wfile.write(bytes("<p>Request: %s</p>" % self.path))
+      self.wfile.write(bytes("<body>"))
+      self.wfile.write(bytes("<p>This is some text.</p>"))
+      self.wfile.write(bytes("</body></html>"))
     # All other paths send a 404
     else:
       self.send_response(404)
